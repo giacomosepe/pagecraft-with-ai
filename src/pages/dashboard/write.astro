@@ -3,25 +3,44 @@
  * write.astro
  * -----------------------------------------------------------------
  * Page: /dashboard/write
+ * Route: /dashboard/write?framework=<slug>
  * -----------------------------------------------------------------
- * Fetches framework + default prompts from MongoDB.
- * Passes data to client via window.__WRITE_DATA__.
+ * Responsibilities (this file only):
+ *   1. Read ?framework= from URL, redirect if missing
+ *   2. Fetch framework + default prompts from MongoDB
+ *   3. Pass data to client via window.__WRITE_DATA__
+ *   4. Assemble all screen components
  *
- * Layout components:
- *   - GenerateModal   → src/components/write/GenerateModal.astro
- *   - ImproveBox      → src/components/write/ImproveBox.astro
+ * Screens (each is its own component):
+ *   SetupScreen    → collects title, audience, tone, language
+ *   WriteScreen    → StepList (left) + StepCard + OutputCard (right)
+ *   CompleteScreen → export buttons
  *
- * All client logic lives in:
- *   → src/scripts/write.ts
+ * Modals / overlays:
+ *   GenerateModal  → opens when "Generate with AI" clicked
+ *
+ * All components live in: src/components/write/
+ * All client logic lives in: src/scripts/write/index.ts
  * -----------------------------------------------------------------
  */
+
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
 import { connectDB } from "../../lib/db";
 import { Framework, Prompt } from "../../lib/models";
-import Button from "../../components/Button.astro";
-import GenerateModal from "../../components/write/GenerateModal.astro";
-import ImproveBox from "../../components/write/ImproveBox.astro";
 
+// Screens
+import SetupScreen from "../../components/write/SetupScreen.astro";
+import CompleteScreen from "../../components/write/CompleteScreen.astro";
+
+// Write screen panels
+import StepList from "../../components/write/StepList.astro";
+import StepCard from "../../components/write/StepCard.astro";
+import OutputCard from "../../components/write/OutputCard.astro";
+
+// Overlays
+import GenerateModal from "../../components/write/GenerateModal.astro";
+
+// ── DATA FETCHING ──
 const frameworkSlug = Astro.url.searchParams.get("framework");
 if (!frameworkSlug) return Astro.redirect("/dashboard/new");
 
@@ -35,6 +54,7 @@ const defaultPrompts = await Prompt.find({
     isDefault: true,
 }).lean();
 
+// Build a stepOrder → promptText map for quick lookup in state.ts
 const promptsByStep = defaultPrompts.reduce(
     (acc, p) => {
         acc[p.stepOrder] = p.instructionText;
@@ -43,385 +63,53 @@ const promptsByStep = defaultPrompts.reduce(
     {} as Record<number, string>,
 );
 
+// Serialised for client — read by src/scripts/write/state.ts
 const frameworkData = JSON.stringify(framework);
 const promptsData = JSON.stringify(promptsByStep);
+
+// Sort steps once here so all components get them in order
+const sortedSteps = [...framework.steps].sort((a, b) => a.order - b.order);
 ---
 
-<DashboardLayout title="Write your page following the prompts">
-    <!-- ══════════════════════════════════════════
-         SETUP SCREEN
-         Shown first — collects title, audience, tone, language
-    ══════════════════════════════════════════ -->
-    <div id="setup-screen" class="max-w-xl mx-auto mt-12 px-6">
-        <div class="mb-8">
-            <h2
-                class="text-2xl font-bold mb-2"
-                style="color: var(--color-heading)"
-            >
-                {framework.name}
-            </h2>
-            <p class="text-sm" style="color: var(--color-muted)">
-                {framework.description}
-            </p>
-        </div>
+<DashboardLayout title="Write — {framework.name}">
+    <!-- Screen 1: Setup — shown on page load -->
+    <SetupScreen name={framework.name} description={framework.description} />
 
-        <div class="card">
-            <div class="flex flex-col gap-4">
-                <div>
-                    <label
-                        class="block text-sm font-medium mb-1"
-                        style="color: var(--color-body)"
-                    >
-                        Page Title
-                        <span
-                            style="color: var(--color-muted)"
-                            class="font-normal">(optional)</span
-                        >
-                    </label>
-                    <input
-                        id="setup-title"
-                        type="text"
-                        placeholder="e.g. Why I switched to Astro"
-                        class="input"
-                    />
-                </div>
-                <div>
-                    <label
-                        class="block text-sm font-medium mb-1"
-                        style="color: var(--color-body)"
-                    >
-                        Target Audience <span class="text-red-400">*</span>
-                    </label>
-                    <input
-                        id="setup-audience"
-                        type="text"
-                        placeholder="e.g. Indie hackers, newsletter writers"
-                        class="input"
-                    />
-                </div>
-                <div>
-                    <label
-                        class="block text-sm font-medium mb-1"
-                        style="color: var(--color-body)"
-                    >
-                        Tone <span class="text-red-400">*</span>
-                    </label>
-                    <select id="setup-tone" class="input">
-                        <option value="">Select a tone...</option>
-                        <option value="conversational">Conversational</option>
-                        <option value="professional">Professional</option>
-                        <option value="authoritative">Authoritative</option>
-                        <option value="friendly">Friendly</option>
-                        <option value="educational">Educational</option>
-                        <option value="storytelling">Storytelling</option>
-                        <option value="persuasive">Persuasive</option>
-                    </select>
-                </div>
-                <div>
-                    <label
-                        class="block text-sm font-medium mb-1"
-                        style="color: var(--color-body)"
-                    >
-                        Language
-                    </label>
-                    <select id="setup-language" class="input">
-                        <option value="en">English</option>
-                        <option value="it">Italian</option>
-                    </select>
-                </div>
-                <Button variant="primary" id="start-btn">Start Writing →</Button
-                >
-            </div>
-        </div>
-    </div>
-
-    <!-- ══════════════════════════════════════════
-         WRITE SCREEN
-         Hidden until setup is complete
-    ══════════════════════════════════════════ -->
+    <!-- Screen 2: Write — hidden until setup is complete -->
     <div id="write-screen" class="hidden h-full">
         <div class="flex" style="min-height: calc(100vh - 57px);">
-            <!-- Left Panel — framework name + step list -->
-            <div
-                class="w-64 flex-shrink-0 border-r p-6 flex flex-col"
-                style="border-color: var(--color-border); background: var(--color-bg);"
-            >
-                <div class="mb-6">
-                    <p
-                        class="text-xs font-medium mb-1"
-                        style="color: var(--color-muted)"
-                    >
-                        Framework
-                    </p>
-                    <h3
-                        class="font-semibold text-sm"
-                        style="color: var(--color-heading)"
-                    >
-                        {framework.name}
-                    </h3>
-                </div>
+            <!-- Left panel: framework info + step list -->
+            <StepList
+                name={framework.name}
+                category={framework.category}
+                steps={sortedSteps}
+            />
 
-                <div class="mb-6">
-                    <p class="text-xs mb-2" style="color: var(--color-muted)">
-                        Writing for
-                    </p>
-                    <span class="badge badge-accent">{framework.category}</span>
-                </div>
-
-                <hr style="border-color: var(--color-border)" class="mb-4" />
-
-                <p
-                    class="text-xs font-medium mb-3"
-                    style="color: var(--color-muted)"
-                >
-                    Steps
-                </p>
-                <ul id="step-list" class="flex flex-col gap-1 flex-1">
-                    {
-                        framework.steps
-                            .sort((a, b) => a.order - b.order)
-                            .map((step, i) => (
-                                <li
-                                    data-index={i}
-                                    class="step-list-item flex items-center gap-2 px-3 py-2 rounded-md text-sm cursor-pointer transition-all"
-                                    style="color: var(--color-muted)"
-                                >
-                                    <span class="step-icon w-4 h-4 flex-shrink-0 text-xs flex items-center justify-center">
-                                        {i + 1}
-                                    </span>
-                                    <span class="step-label truncate">
-                                        {step.title}
-                                    </span>
-                                </li>
-                            ))
-                    }
-                </ul>
-            </div>
-
-            <!-- Right Panel — active step + AI interaction -->
+            <!-- Right panel: active step card + AI output -->
             <div class="flex-1 overflow-y-auto p-8">
-                <!-- Progress bar -->
-                <div class="mb-6">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs" style="color: var(--color-muted)">
-                            Step <span id="current-step-num">1</span> of
-                            <span id="total-steps"
-                                >{framework.steps.length}</span
-                            >
-                        </span>
-                        <span
-                            id="step-title-top"
-                            class="text-xs font-medium"
-                            style="color: var(--color-body)"></span>
-                    </div>
-                    <div
-                        class="w-full rounded-full h-1"
-                        style="background: var(--color-border)"
-                    >
-                        <div
-                            id="progress-bar"
-                            class="h-1 rounded-full transition-all"
-                            style="width: 0%; background: var(--color-accent)"
-                        >
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step Card -->
-                <div class="card mb-4">
-                    <div class="mb-4">
-                        <p
-                            class="text-xs mb-3"
-                            style="color: var(--color-muted)"
-                        >
-                            This page is being written for a
-                            <span class="badge badge-accent"
-                                >{framework.category}</span
-                            > job
-                        </p>
-                        <h3
-                            id="step-title"
-                            class="text-lg font-semibold mb-1"
-                            style="color: var(--color-heading)"
-                        >
-                        </h3>
-                        <p
-                            id="step-description"
-                            class="text-sm"
-                            style="color: var(--color-muted)"
-                        >
-                        </p>
-                    </div>
-
-                    <hr class="divider" />
-
-                    <!-- User input -->
-                    <div class="mb-4">
-                        <label
-                            class="block text-sm font-medium mb-1"
-                            style="color: var(--color-body)">Your input</label
-                        >
-                        <textarea
-                            id="user-input"
-                            rows="4"
-                            class="input resize-none"
-                            placeholder="Write your input here..."></textarea>
-                    </div>
-
-                    <!-- Collapsible prompt — editable, with reset -->
-                    <div class="mb-6">
-                        <button
-                            id="toggle-prompt"
-                            class="flex items-center gap-1 text-xs transition-colors"
-                            style="color: var(--color-muted)"
-                        >
-                            <svg
-                                class="w-3 h-3 transition-transform"
-                                id="prompt-chevron"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="m9 5 7 7-7 7"></path>
-                            </svg>
-                            AI Prompt
-                        </button>
-                        <div id="prompt-container" class="hidden mt-2">
-                            <textarea
-                                id="prompt-text"
-                                rows="5"
-                                class="input resize-none font-mono"
-                                style="font-size: 0.75rem; color: var(--color-muted)"
-                            ></textarea>
-                            <button
-                                id="reset-prompt"
-                                class="text-xs mt-1 transition-colors"
-                                style="color: var(--color-muted)"
-                            >
-                                ↺ Reset to default
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Action buttons -->
-                    <div class="flex items-center justify-between gap-2">
-                        <!-- Left: manual actions -->
-                        <div class="flex gap-2">
-                            <Button variant="primary" id="save-btn">Save</Button
-                            >
-                            <Button variant="secondary" id="skip-btn"
-                                >Skip for now</Button
-                            >
-                        </div>
-                        <!-- Divider -->
-                        <div
-                            class="w-px h-6 flex-shrink-0"
-                            style="background: var(--color-border)"
-                        >
-                        </div>
-                        <!-- Right: AI actions -->
-                        <div class="flex gap-2">
-                            <Button variant="secondary" id="improve-btn"
-                                >Improve with AI</Button
-                            >
-                            <Button variant="warning" id="generate-btn"
-                                >✦ Generate with AI</Button
-                            >
-                        </div>
-                    </div>
-
-                    <!-- ImproveBox component — hidden until "Improve with AI" clicked -->
-                    <ImproveBox />
-                </div>
-
-                <!-- AI Output Card — hidden until content is generated -->
-                <div id="output-card" class="card hidden mb-4">
-                    <div class="flex items-center justify-between mb-3">
-                        <span
-                            class="text-sm font-medium"
-                            style="color: var(--color-body)"
-                            >Generated content</span
-                        >
-                        <span class="badge badge-accent">AI</span>
-                    </div>
-                    <div
-                        id="ai-output"
-                        class="text-sm leading-relaxed whitespace-pre-wrap mb-4"
-                        style="color: var(--color-body)"
-                    >
-                    </div>
-
-                    <hr class="divider" />
-
-                    <div class="mb-4">
-                        <label
-                            class="block text-sm font-medium mb-1"
-                            style="color: var(--color-body)"
-                        >
-                            Want improvements?
-                            <span
-                                class="font-normal"
-                                style="color: var(--color-muted)"
-                                >Tell AI what to change</span
-                            >
-                        </label>
-                        <textarea
-                            id="refinement-input"
-                            rows="2"
-                            placeholder="e.g. Make it shorter, more personal, add a metaphor..."
-                            class="input resize-none"></textarea>
-                    </div>
-
-                    <div class="flex gap-2">
-                        <Button variant="secondary" id="refine-btn"
-                            >↺ Refine</Button
-                        >
-                        <Button variant="primary" id="approve-btn"
-                            >Approve & Next →</Button
-                        >
-                    </div>
-                </div>
+                <StepCard
+                    category={framework.category}
+                    totalSteps={sortedSteps.length}
+                />
+                <OutputCard />
             </div>
         </div>
     </div>
 
-    <!-- ══════════════════════════════════════════
-         COMPLETE SCREEN
-         Shown when all steps are approved or skipped
-    ══════════════════════════════════════════ -->
-    <div
-        id="complete-screen"
-        class="hidden max-w-xl mx-auto mt-12 px-6 text-center"
-    >
-        <div class="text-4xl mb-4">✦</div>
-        <h2 class="text-2xl font-bold mb-2" style="color: var(--color-heading)">
-            Page complete!
-        </h2>
-        <p class="mb-8" style="color: var(--color-muted)">
-            All steps done. Your page is ready to export.
-        </p>
-        <div class="flex gap-3 justify-center">
-            <Button variant="primary" id="export-md-btn">Export as .md</Button>
-            <Button variant="secondary" id="copy-btn">Copy to clipboard</Button>
-        </div>
-    </div>
+    <!-- Screen 3: Complete — hidden until all steps resolved -->
+    <CompleteScreen />
 
-    <!-- GenerateModal component — hidden until "Generate with AI" clicked -->
+    <!-- Overlay: Generate modal — hidden until "Generate with AI" clicked -->
     <GenerateModal />
 </DashboardLayout>
 
 <!--
-    Data bridge: passes server-side framework + prompt data to write.ts
-    window.__WRITE_DATA__ is read by src/scripts/write.ts
+    Data bridge — passes MongoDB data to the client.
+    window.__WRITE_DATA__ is read by src/scripts/write/state.ts
 -->
 <script define:vars={{ frameworkData, promptsData }}>
     window.__WRITE_DATA__ = { frameworkData, promptsData };
 </script>
 
-<!-- All write page logic — see src/scripts/write.ts -->
-
+<!-- Entry point for all write page client logic -->
 <script src="../../scripts/write/index.ts"></script>

@@ -1,0 +1,78 @@
+---
+/**
+ * StepList.astro
+ * -----------------------------------------------------------------
+ * Component: Left panel of the write screen
+ * Used in: src/pages/dashboard/write.astro (inside write-screen)
+ * Controlled by: src/scripts/write/navigation.ts
+ * -----------------------------------------------------------------
+ * Shows:
+ *   - Framework name
+ *   - Category badge ("Writing for copywriting")
+ *   - Clickable step list with status icons:
+ *       number  → pending
+ *       ✓       → approved (green)
+ *       ✕       → skipped (red)
+ *
+ * Step icons and active highlight are updated by
+ * navigation.ts → updateStepList() on every step change.
+ * -----------------------------------------------------------------
+ * Props:
+ *   - name: string       framework display name
+ *   - category: string   framework category (e.g. "copywriting")
+ *   - steps: array       sorted array of step objects { title, order }
+ * -----------------------------------------------------------------
+ */
+
+interface Props {
+    name: string;
+    category: string;
+    steps: Array<{ title: string; order: number }>;
+}
+
+const { name, category, steps } = Astro.props;
+---
+
+<div
+    class="w-64 flex-shrink-0 border-r p-6 flex flex-col"
+    style="border-color: var(--color-border); background: var(--color-bg);"
+>
+    <!-- Framework name -->
+    <div class="mb-6">
+        <p class="text-xs font-medium mb-1" style="color: var(--color-muted)">
+            Framework
+        </p>
+        <h3 class="font-semibold text-sm" style="color: var(--color-heading)">
+            {name}
+        </h3>
+    </div>
+
+    <!-- Category badge -->
+    <div class="mb-6">
+        <p class="text-xs mb-2" style="color: var(--color-muted)">Writing for</p>
+        <span class="badge badge-accent">{category}</span>
+    </div>
+
+    <hr style="border-color: var(--color-border)" class="mb-4" />
+
+    <!-- Step list -->
+    <p class="text-xs font-medium mb-3" style="color: var(--color-muted)">Steps</p>
+    <ul id="step-list" class="flex flex-col gap-1 flex-1">
+        {steps
+            .sort((a, b) => a.order - b.order)
+            .map((step, i) => (
+                <li
+                    data-index={i}
+                    class="step-list-item flex items-center gap-2 px-3 py-2 rounded-md text-sm cursor-pointer transition-all"
+                    style="color: var(--color-muted)"
+                >
+                    <!-- Icon updated by navigation.ts → updateStepList() -->
+                    <span class="step-icon w-4 h-4 flex-shrink-0 text-xs flex items-center justify-center">
+                        {i + 1}
+                    </span>
+                    <span class="step-label truncate">{step.title}</span>
+                </li>
+            ))
+        }
+    </ul>
+</div>

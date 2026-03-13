@@ -1,0 +1,174 @@
+---
+/**
+ * StepCard.astro
+ * -----------------------------------------------------------------
+ * Component: Active step card in the right panel of the write screen
+ * Used in: src/pages/dashboard/write.astro (inside write-screen)
+ * Controlled by: src/scripts/write/navigation.ts (loadStep)
+ * -----------------------------------------------------------------
+ * Shows:
+ *   - Progress bar with step counter
+ *   - Step title and description (filled by loadStep via DOM)
+ *   - User input textarea
+ *   - Collapsible AI prompt (editable, with reset to default)
+ *   - Action buttons: Save, Skip, Improve with AI, Generate with AI
+ *   - ImproveBox (hidden until "Improve with AI" clicked)
+ *
+ * All text content (step title, description, placeholder) is set
+ * dynamically by navigation.ts → loadStep() using element IDs.
+ * -----------------------------------------------------------------
+ * Props:
+ *   - category: string   used in the "writing for X" label
+ *   - totalSteps: number used in "Step X of Y" counter
+ * -----------------------------------------------------------------
+ */
+
+import Button from "../Button.astro";
+import ImproveBox from "./ImproveBox.astro";
+
+interface Props {
+    category: string;
+    totalSteps: number;
+}
+
+const { category, totalSteps } = Astro.props;
+---
+
+<div class="flex-1 overflow-y-auto p-8">
+    <!-- Progress bar -->
+    <div class="mb-6">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-xs" style="color: var(--color-muted)">
+                Step <span id="current-step-num">1</span> of
+                <span id="total-steps">{totalSteps}</span>
+            </span>
+            <!-- Step name shown top-right — updated by loadStep() -->
+            <span
+                id="step-title-top"
+                class="text-xs font-medium"
+                style="color: var(--color-body)"></span>
+        </div>
+        <div
+            class="w-full rounded-full h-1"
+            style="background: var(--color-border)"
+        >
+            <div
+                id="progress-bar"
+                class="h-1 rounded-full transition-all"
+                style="width: 0%; background: var(--color-accent)"
+            >
+            </div>
+        </div>
+    </div>
+
+    <!-- Step Card -->
+    <div class="card mb-4">
+        <!-- Step header — all content set by loadStep() -->
+        <div class="mb-4">
+            <p class="text-xs mb-3" style="color: var(--color-muted)">
+                This page is being written for a
+                <span class="badge badge-accent">{category}</span>
+            </p>
+            <h3
+                id="step-title"
+                class="text-lg font-semibold mb-1"
+                style="color: var(--color-heading)"
+            >
+            </h3>
+            <p
+                id="step-description"
+                class="text-sm"
+                style="color: var(--color-muted)"
+            >
+            </p>
+        </div>
+
+        <hr class="divider" />
+
+        <!-- User input textarea -->
+        <div class="mb-4">
+            <label
+                class="block text-sm font-medium mb-1"
+                style="color: var(--color-body)"
+            >
+                Your input
+            </label>
+            <textarea
+                id="user-input"
+                rows="4"
+                class="input resize-none"
+                placeholder="Write your input here..."></textarea>
+        </div>
+
+        <!-- Collapsible AI prompt
+             Toggle handled by navigation.ts → toggle-prompt listener
+             Reset handled by navigation.ts → reset-prompt listener -->
+        <div class="mb-6">
+            <button
+                id="toggle-prompt"
+                class="flex items-center gap-1 text-xs transition-colors"
+                style="color: var(--color-muted)"
+            >
+                <svg
+                    class="w-3 h-3 transition-transform"
+                    id="prompt-chevron"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="m9 5 7 7-7 7"></path>
+                </svg>
+                AI Prompt
+            </button>
+            <div id="prompt-container" class="hidden mt-2">
+                <textarea
+                    id="prompt-text"
+                    rows="5"
+                    class="input resize-none font-mono"
+                    style="font-size: 0.75rem; color: var(--color-muted)"
+                ></textarea>
+                <button
+                    id="reset-prompt"
+                    class="text-xs mt-1 transition-colors"
+                    style="color: var(--color-muted)"
+                >
+                    ↺ Reset to default
+                </button>
+            </div>
+        </div>
+
+        <!-- Action buttons row -->
+        <div class="flex items-center justify-between gap-2">
+            <!-- Left: manual actions (no AI) -->
+            <div class="flex gap-2">
+                <Button variant="primary" id="save-btn">Save</Button>
+                <Button variant="secondary" id="skip-btn">Skip for now</Button>
+            </div>
+
+            <!-- Visual divider -->
+            <div
+                class="w-px h-6 flex-shrink-0"
+                style="background: var(--color-border)"
+            >
+            </div>
+
+            <!-- Right: AI actions -->
+            <div class="flex gap-2">
+                <Button variant="secondary" id="improve-btn"
+                    >Improve with AI</Button
+                >
+                <Button variant="warning" id="generate-btn"
+                    >✦ Generate with AI</Button
+                >
+            </div>
+        </div>
+
+        <!-- ImproveBox — hidden until "Improve with AI" clicked
+             Controlled by: src/scripts/write/improve.ts -->
+        <ImproveBox />
+    </div>
+</div>

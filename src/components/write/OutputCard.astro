@@ -1,0 +1,70 @@
+---
+/**
+ * OutputCard.astro
+ * -----------------------------------------------------------------
+ * Component: AI output card shown after generation
+ * Used in: src/pages/dashboard/write.astro
+ *          (sits below StepCard in the right panel)
+ * Controlled by: src/scripts/write/generate.ts (shows the card)
+ *                src/scripts/write/refine.ts    (refine button)
+ *                src/scripts/write/manual.ts    (approve button)
+ * -----------------------------------------------------------------
+ * Hidden by default — shown when AI generates content.
+ * Resets when navigating to a new step (loadStep in navigation.ts).
+ *
+ * Shows:
+ *   - AI generated text (filled via DOM by generate/improve/refine)
+ *   - Refinement textarea + Refine button (src/scripts/write/refine.ts)
+ *   - Approve & Next button (src/scripts/write/manual.ts)
+ * -----------------------------------------------------------------
+ */
+
+import Button from "../Button.astro";
+---
+
+<div id="output-card" class="card hidden mb-4">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-3">
+        <span class="text-sm font-medium" style="color: var(--color-body)">
+            Generated content
+        </span>
+        <span class="badge badge-accent">AI</span>
+    </div>
+
+    <!-- AI output text — filled by generate.ts / improve.ts / refine.ts -->
+    <div
+        id="ai-output"
+        class="text-sm leading-relaxed whitespace-pre-wrap mb-4"
+        style="color: var(--color-body)"
+    >
+    </div>
+
+    <hr class="divider" />
+
+    <!-- Refinement input — handled by refine.ts -->
+    <div class="mb-4">
+        <label
+            class="block text-sm font-medium mb-1"
+            style="color: var(--color-body)"
+        >
+            Want improvements?
+            <span class="font-normal" style="color: var(--color-muted)">
+                Tell AI what to change
+            </span>
+        </label>
+        <textarea
+            id="refinement-input"
+            rows="2"
+            placeholder="e.g. Make it shorter, more personal, add a metaphor..."
+            class="input resize-none"></textarea>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex gap-2">
+        <!-- Refine — sends existing AI output back to Claude with instructions -->
+        <Button variant="secondary" id="refine-btn">↺ Refine</Button>
+
+        <!-- Approve — marks step done, moves to next step -->
+        <Button variant="primary" id="approve-btn">Approve & Next →</Button>
+    </div>
+</div>

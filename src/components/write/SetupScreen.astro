@@ -1,0 +1,123 @@
+---
+/**
+ * SetupScreen.astro
+ * -----------------------------------------------------------------
+ * Component: First screen shown on /dashboard/write
+ * Used in: src/pages/dashboard/write.astro
+ * Controlled by: src/scripts/write/index.ts (start-btn handler)
+ * -----------------------------------------------------------------
+ * Collects:
+ *   - Page title     (optional)
+ *   - Audience       (required)
+ *   - Tone           (required)
+ *   - Language       (optional, defaults to en)
+ *
+ * On "Start Writing" click:
+ *   - Values are written into sessionData (state.ts)
+ *   - This screen hides, write screen shows
+ *   - First step loads via loadStep(0)
+ * -----------------------------------------------------------------
+ * Props:
+ *   - name: string        framework display name
+ *   - description: string framework description
+ * -----------------------------------------------------------------
+ */
+
+interface Props {
+    name: string;
+    description: string;
+}
+
+const { name, description } = Astro.props;
+---
+
+<div id="setup-screen" class="max-w-xl mx-auto mt-12 px-6">
+    <!-- Framework intro -->
+    <div class="mb-8">
+        <h2 class="text-2xl font-bold mb-2" style="color: var(--color-heading)">
+            {name}
+        </h2>
+        <p class="text-sm" style="color: var(--color-muted)">
+            {description}
+        </p>
+    </div>
+
+    <!-- Setup form -->
+    <div class="card">
+        <div class="flex flex-col gap-4">
+            <!-- Page title (optional) -->
+            <div>
+                <label
+                    class="block text-sm font-medium mb-1"
+                    style="color: var(--color-body)"
+                >
+                    Page Title
+                    <span style="color: var(--color-muted)" class="font-normal"
+                        >(optional)</span
+                    >
+                </label>
+                <input
+                    id="setup-title"
+                    type="text"
+                    placeholder="e.g. Why I switched to Astro"
+                    class="input"
+                />
+            </div>
+
+            <!-- Audience (required) -->
+            <div>
+                <label
+                    class="block text-sm font-medium mb-1"
+                    style="color: var(--color-body)"
+                >
+                    Target Audience <span class="text-red-400">*</span>
+                </label>
+                <input
+                    id="setup-audience"
+                    type="text"
+                    placeholder="e.g. Indie hackers, newsletter writers"
+                    class="input"
+                />
+            </div>
+
+            <!-- Tone (required) -->
+            <div>
+                <label
+                    class="block text-sm font-medium mb-1"
+                    style="color: var(--color-body)"
+                >
+                    Tone <span class="text-red-400">*</span>
+                </label>
+                <select id="setup-tone" class="input">
+                    <option value="">Select a tone...</option>
+                    <option value="conversational">Conversational</option>
+                    <option value="professional">Professional</option>
+                    <option value="authoritative">Authoritative</option>
+                    <option value="friendly">Friendly</option>
+                    <option value="educational">Educational</option>
+                    <option value="storytelling">Storytelling</option>
+                    <option value="persuasive">Persuasive</option>
+                </select>
+            </div>
+
+            <!-- Language (optional, defaults to en) -->
+            <div>
+                <label
+                    class="block text-sm font-medium mb-1"
+                    style="color: var(--color-body)"
+                >
+                    Language
+                </label>
+                <select id="setup-language" class="input">
+                    <option value="en">English</option>
+                    <option value="it">Italian</option>
+                </select>
+            </div>
+
+            <!-- Start button — handled by index.ts -->
+            <button id="start-btn" class="btn btn-primary w-full">
+                Start Writing →
+            </button>
+        </div>
+    </div>
+</div>

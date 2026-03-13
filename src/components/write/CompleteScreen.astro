@@ -1,0 +1,41 @@
+---
+/**
+ * CompleteScreen.astro
+ * -----------------------------------------------------------------
+ * Component: Final screen shown when all steps are done
+ * Used in: src/pages/dashboard/write.astro
+ * Controlled by: src/scripts/write/manual.ts → checkComplete()
+ *                src/scripts/write/export.ts  → export buttons
+ * -----------------------------------------------------------------
+ * Shown when every step is either approved (✓) or skipped (✕).
+ * checkComplete() in manual.ts handles the transition.
+ *
+ * Buttons:
+ *   - Export as .md      → downloads a markdown file (export.ts)
+ *   - Copy to clipboard  → copies markdown to clipboard (export.ts)
+ * -----------------------------------------------------------------
+ */
+
+import Button from "../Button.astro";
+---
+
+<div
+    id="complete-screen"
+    class="hidden max-w-xl mx-auto mt-12 px-6 text-center"
+>
+    <div class="text-4xl mb-4">✦</div>
+
+    <h2 class="text-2xl font-bold mb-2" style="color: var(--color-heading)">
+        Page complete!
+    </h2>
+
+    <p class="mb-8" style="color: var(--color-muted)">
+        All steps done. Your page is ready to export.
+    </p>
+
+    <div class="flex gap-3 justify-center">
+        <!-- Both buttons handled by src/scripts/write/export.ts -->
+        <Button variant="primary" id="export-md-btn">Export as .md</Button>
+        <Button variant="secondary" id="copy-btn">Copy to clipboard</Button>
+    </div>
+</div>
