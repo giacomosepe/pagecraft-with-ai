@@ -1,6 +1,7 @@
 ---
 import Base from "../layouts/Base.astro";
 import Sidebar from "../components/Sidebar.astro";
+import TopNav from "../components/TopNav.astro";
 
 interface Props {
     title?: string;
@@ -37,6 +38,7 @@ const { title, description } = Astro.props;
 
     <Sidebar />
     <div class="p-4 sm:ml-64">
+        <TopNav title={title} />
         <slot />
     </div>
 </Base>

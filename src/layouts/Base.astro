@@ -4,6 +4,7 @@ interface Props {
     title: string;
     description?: string;
 }
+
 import { siteConfig } from "../config/site.ts";
 
 const { title = siteConfig.name, description = siteConfig.description } =

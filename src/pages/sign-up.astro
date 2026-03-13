@@ -1,0 +1,10 @@
+---
+import Base from "../layouts/Base.astro";
+import { SignUp } from "@clerk/astro/components";
+---
+
+<Base title="Sign Up">
+    <div class="min-h-screen flex items-center justify-center bg-gray-50">
+        <SignUp fallbackRedirectUrl="/dashboard" />
+    </div>
+</Base>

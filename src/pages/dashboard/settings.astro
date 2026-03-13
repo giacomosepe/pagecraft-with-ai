@@ -1,0 +1,236 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import { connectDB } from "../../lib/db";
+import { UserProfile } from "../../lib/models";
+import Button from "../../components/Button.astro";
+
+const { userId } = Astro.locals.auth();
+await connectDB();
+const profile = await UserProfile.findOne({ userId }).lean();
+---
+
+<DashboardLayout title="Settings">
+    <div class="max-w-2xl mx-auto px-6 py-8">
+        <div class="mb-8">
+            <h2
+                class="text-2xl font-bold mb-1"
+                style="color: var(--color-heading)"
+            >
+                Settings
+            </h2>
+            <p class="text-sm" style="color: var(--color-muted)">
+                Manage your API keys and writing preferences.
+            </p>
+        </div>
+
+        <!-- API Keys -->
+        <div class="card mb-6">
+            <h3
+                class="text-base font-semibold mb-1"
+                style="color: var(--color-heading)"
+            >
+                API Keys
+            </h3>
+            <p class="text-sm mb-4" style="color: var(--color-muted)">
+                Your keys are stored privately and never shared. Used to
+                generate content with AI.
+            </p>
+            <div class="flex flex-col gap-4">
+                <div>
+                    <label
+                        class="block text-sm font-medium mb-1"
+                        style="color: var(--color-body)">Claude API Key</label
+                    >
+                    <input
+                        id="claude-key"
+                        type="password"
+                        placeholder="sk-ant-..."
+                        value={profile?.apiKeys?.claude || ""}
+                        class="input"
+                    />
+                    <p class="text-xs mt-1" style="color: var(--color-muted)">
+                        Get your key at <a
+                            href="https://console.anthropic.com"
+                            target="_blank">console.anthropic.com</a
+                        >
+                    </p>
+                </div>
+                <div>
+                    <label
+                        class="block text-sm font-medium mb-1"
+                        style="color: var(--color-body)"
+                    >
+                        OpenAI API Key <span
+                            class="font-normal"
+                            style="color: var(--color-muted)"
+                            >(coming soon)</span
+                        >
+                    </label>
+                    <input
+                        id="openai-key"
+                        type="password"
+                        placeholder="sk-..."
+                        value={profile?.apiKeys?.openai || ""}
+                        class="input"
+                        disabled
+                    />
+                </div>
+            </div>
+        </div>
+
+        <!-- Writing Preferences -->
+        <div class="card mb-6">
+            <h3
+                class="text-base font-semibold mb-1"
+                style="color: var(--color-heading)"
+            >
+                Writing Preferences
+            </h3>
+            <p class="text-sm mb-4" style="color: var(--color-muted)">
+                These will pre-fill the setup screen every time you start a new
+                page.
+            </p>
+            <div class="flex flex-col gap-4">
+                <div>
+                    <label
+                        class="block text-sm font-medium mb-1"
+                        style="color: var(--color-body)">Default Audience</label
+                    >
+                    <input
+                        id="default-audience"
+                        type="text"
+                        placeholder="e.g. Indie hackers, newsletter writers"
+                        value={profile?.preferences?.defaultAudience || ""}
+                        class="input"
+                    />
+                </div>
+                <div>
+                    <label
+                        class="block text-sm font-medium mb-1"
+                        style="color: var(--color-body)">Default Tone</label
+                    >
+                    <select id="default-tone" class="input">
+                        <option value="">No default</option>
+                        <option
+                            value="conversational"
+                            selected={profile?.preferences?.defaultTone ===
+                                "conversational"}>Conversational</option
+                        >
+                        <option
+                            value="professional"
+                            selected={profile?.preferences?.defaultTone ===
+                                "professional"}>Professional</option
+                        >
+                        <option
+                            value="authoritative"
+                            selected={profile?.preferences?.defaultTone ===
+                                "authoritative"}>Authoritative</option
+                        >
+                        <option
+                            value="friendly"
+                            selected={profile?.preferences?.defaultTone ===
+                                "friendly"}>Friendly</option
+                        >
+                        <option
+                            value="educational"
+                            selected={profile?.preferences?.defaultTone ===
+                                "educational"}>Educational</option
+                        >
+                        <option
+                            value="storytelling"
+                            selected={profile?.preferences?.defaultTone ===
+                                "storytelling"}>Storytelling</option
+                        >
+                        <option
+                            value="persuasive"
+                            selected={profile?.preferences?.defaultTone ===
+                                "persuasive"}>Persuasive</option
+                        >
+                    </select>
+                </div>
+                <div>
+                    <label
+                        class="block text-sm font-medium mb-1"
+                        style="color: var(--color-body)">Default Language</label
+                    >
+                    <select id="default-language" class="input">
+                        <option
+                            value="en"
+                            selected={profile?.preferences?.defaultLanguage ===
+                                "en"}>English</option
+                        >
+                        <option
+                            value="it"
+                            selected={profile?.preferences?.defaultLanguage ===
+                                "it"}>Italian</option
+                        >
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Save -->
+        <div class="flex items-center gap-3">
+            <Button variant="primary" id="save-settings-btn"
+                >Save Settings</Button
+            >
+            <span
+                id="save-status"
+                class="text-sm hidden"
+                style="color: var(--color-accent)">✓ Saved!</span
+            >
+        </div>
+    </div>
+</DashboardLayout>
+
+<script>
+    document
+        .getElementById("save-settings-btn")
+        ?.addEventListener("click", async () => {
+            const btn = document.getElementById("save-settings-btn");
+            const status = document.getElementById("save-status");
+
+            btn?.setAttribute("disabled", "true");
+
+            const body = {
+                claudeKey: (
+                    document.getElementById("claude-key") as HTMLInputElement
+                ).value.trim(),
+                openaiKey: (
+                    document.getElementById("openai-key") as HTMLInputElement
+                ).value.trim(),
+                defaultAudience: (
+                    document.getElementById(
+                        "default-audience",
+                    ) as HTMLInputElement
+                ).value.trim(),
+                defaultTone: (
+                    document.getElementById("default-tone") as HTMLSelectElement
+                ).value,
+                defaultLanguage: (
+                    document.getElementById(
+                        "default-language",
+                    ) as HTMLSelectElement
+                ).value,
+            };
+
+            try {
+                const res = await fetch("/api/profile/save", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body),
+                });
+
+                if (res.ok) {
+                    status?.classList.remove("hidden");
+                    setTimeout(() => status?.classList.add("hidden"), 3000);
+                } else {
+                    alert("Failed to save. Please try again.");
+                }
+            } catch (e) {
+                alert("Something went wrong.");
+            } finally {
+                btn?.removeAttribute("disabled");
+            }
+        });
+</script>

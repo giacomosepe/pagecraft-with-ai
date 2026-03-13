@@ -1,0 +1,276 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import { connectDB } from "../../lib/db";
+import { AccessCode } from "../../lib/models";
+import Button from "../../components/Button.astro";
+
+const user = await Astro.locals.currentUser();
+if (!user) return Astro.redirect("/sign-in");
+
+await connectDB();
+const license = await AccessCode.findOne({ clerkUserId: user.id }).lean();
+
+const memberSince = license?.purchasedAt
+    ? new Date(license.purchasedAt).toLocaleDateString("en-GB", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+      })
+    : null;
+---
+
+<DashboardLayout title="Profile">
+    <div class="max-w-2xl mx-auto px-6 py-8">
+        <div class="mb-8">
+            <h2
+                class="text-2xl font-bold mb-1"
+                style="color: var(--color-heading)"
+            >
+                Profile
+            </h2>
+            <p class="text-sm" style="color: var(--color-muted)">
+                Your personal information and license details.
+            </p>
+        </div>
+
+        <!-- Avatar + Name -->
+        <div class="card mb-6">
+            <h3
+                class="text-base font-semibold mb-4"
+                style="color: var(--color-heading)"
+            >
+                Photo & Name
+            </h3>
+
+            <div class="flex items-center gap-6">
+                <!-- Photo -->
+                <div class="relative">
+                    {
+                        user.imageUrl ? (
+                            <img
+                                src={user.imageUrl}
+                                alt="Profile photo"
+                                class="w-20 h-20 rounded-full object-cover"
+                            />
+                        ) : (
+                            <div
+                                class="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold"
+                                style="background: var(--color-accent)"
+                            >
+                                {(
+                                    user.firstName?.[0] ||
+                                    user.emailAddresses?.[0]
+                                        ?.emailAddress?.[0] ||
+                                    "U"
+                                ).toUpperCase()}
+                            </div>
+                        )
+                    }
+                </div>
+
+                <!-- Name + email -->
+                <div class="flex-1">
+                    <p
+                        class="font-semibold text-lg"
+                        style="color: var(--color-heading)"
+                    >
+                        {user.firstName}
+                        {user.lastName}
+                    </p>
+                    <p class="text-sm" style="color: var(--color-muted)">
+                        {user.emailAddresses?.[0]?.emailAddress}
+                    </p>
+                    <button
+                        id="update-photo-btn"
+                        class="text-xs mt-2 underline transition-colors"
+                        style="color: var(--color-accent)"
+                    >
+                        Update photo & name →
+                    </button>
+                </div>
+            </div>
+
+            <!-- Clerk UserProfile modal -->
+            <div
+                id="clerk-profile-modal"
+                class="hidden fixed inset-0 z-50 flex items-center justify-center"
+                style="background: rgba(0,0,0,0.4)"
+            >
+                <div
+                    class="bg-white rounded-xl shadow-xl p-6 relative max-w-lg w-full mx-4"
+                >
+                    <button
+                        id="close-modal-btn"
+                        class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                    >
+                        <svg
+                            class="w-5 h-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                    <div id="clerk-profile-mount"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- License -->
+        <div class="card mb-6">
+            <h3
+                class="text-base font-semibold mb-4"
+                style="color: var(--color-heading)"
+            >
+                License
+            </h3>
+
+            {
+                license ? (
+                    <div class="flex flex-col gap-3">
+                        <div class="flex items-center justify-between">
+                            <span
+                                class="text-sm"
+                                style="color: var(--color-muted)"
+                            >
+                                Status
+                            </span>
+                            <span
+                                class={`badge ${license.status === "active" ? "badge-accent" : "badge-gray"}`}
+                            >
+                                {license.status === "active"
+                                    ? "✓ Active"
+                                    : "Purchased"}
+                            </span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span
+                                class="text-sm"
+                                style="color: var(--color-muted)"
+                            >
+                                License key
+                            </span>
+                            <span
+                                class="text-sm font-mono"
+                                style="color: var(--color-body)"
+                            >
+                                {license.licenseKey}
+                            </span>
+                        </div>
+                        {memberSince && (
+                            <div class="flex items-center justify-between">
+                                <span
+                                    class="text-sm"
+                                    style="color: var(--color-muted)"
+                                >
+                                    Member since
+                                </span>
+                                <span
+                                    class="text-sm"
+                                    style="color: var(--color-body)"
+                                >
+                                    {memberSince}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div class="text-center py-4">
+                        <p
+                            class="text-sm mb-3"
+                            style="color: var(--color-muted)"
+                        >
+                            No license found for this account.
+                        </p>
+                        <a
+                            href="https://pagecraft.it"
+                            target="_blank"
+                            class="btn btn-primary text-sm"
+                        >
+                            Get a license
+                        </a>
+                    </div>
+                )
+            }
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="card" style="border-color: var(--color-error)">
+            <h3
+                class="text-base font-semibold mb-1"
+                style="color: var(--color-error)"
+            >
+                Danger Zone
+            </h3>
+            <p class="text-sm mb-4" style="color: var(--color-muted)">
+                These actions are irreversible.
+            </p>
+            <Button variant="secondary" id="delete-account-btn"
+                >Delete Account</Button
+            >
+        </div>
+    </div>
+</DashboardLayout>
+
+<script>
+    // Open Clerk profile modal
+    document
+        .getElementById("update-photo-btn")
+        ?.addEventListener("click", () => {
+            document
+                .getElementById("clerk-profile-modal")
+                ?.classList.remove("hidden");
+
+            // Mount Clerk UserProfile component
+            const mountEl = document.getElementById("clerk-profile-mount");
+            if (mountEl && (window as any).Clerk) {
+                (window as any).Clerk.mountUserProfile(mountEl, {
+                    appearance: {
+                        elements: {
+                            rootBox: { width: "100%" },
+                            card: { boxShadow: "none", border: "none" },
+                        },
+                    },
+                });
+            }
+        });
+
+    // Close modal
+    document
+        .getElementById("close-modal-btn")
+        ?.addEventListener("click", () => {
+            document
+                .getElementById("clerk-profile-modal")
+                ?.classList.add("hidden");
+        });
+
+    // Close on backdrop click
+    document
+        .getElementById("clerk-profile-modal")
+        ?.addEventListener("click", (e) => {
+            if (e.target === document.getElementById("clerk-profile-modal")) {
+                document
+                    .getElementById("clerk-profile-modal")
+                    ?.classList.add("hidden");
+            }
+        });
+
+    // Delete account — placeholder
+    document
+        .getElementById("delete-account-btn")
+        ?.addEventListener("click", () => {
+            if (
+                confirm(
+                    "Are you sure? This will permanently delete your account and all your pages.",
+                )
+            ) {
+                // TODO: call delete API
+                alert("Account deletion coming soon.");
+            }
+        });
+</script>

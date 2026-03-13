@@ -1,0 +1,125 @@
+---
+import { SignOutButton } from "@clerk/astro/components";
+
+interface Props {
+    title?: string;
+}
+
+const { title = "Dashboard" } = Astro.props;
+const user = await Astro.locals.currentUser();
+const initial =
+    user?.firstName?.[0] || user?.emailAddresses?.[0]?.emailAddress?.[0] || "U";
+const photo = user?.imageUrl || null;
+---
+
+<nav
+    class="bg-white border-b px-6 py-3 flex items-center justify-between"
+    style="border-color: var(--color-border)"
+>
+    <h1 class="text-base font-semibold" style="color: var(--color-heading)">
+        {title}
+    </h1>
+
+    <div class="relative">
+        <button
+            id="user-menu-button"
+            type="button"
+            class="flex items-center gap-2 text-sm focus:outline-none"
+            style="color: var(--color-body)"
+        >
+            {
+                photo ? (
+                    <img
+                        src={photo}
+                        alt="avatar"
+                        class="w-8 h-8 rounded-full object-cover"
+                    />
+                ) : (
+                    <div
+                        class="w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-sm"
+                        style="background: var(--color-accent)"
+                    >
+                        {initial.toUpperCase()}
+                    </div>
+                )
+            }
+            <svg
+                class="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+            >
+                <path
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="m19 9-7 7-7-7"></path>
+            </svg>
+        </button>
+
+        <div
+            id="user-menu-dropdown"
+            class="hidden absolute right-0 mt-2 w-44 bg-white border rounded-lg shadow-lg z-50"
+            style="border-color: var(--color-border)"
+        >
+            <div
+                class="px-4 py-2 border-b"
+                style="border-color: var(--color-border)"
+            >
+                <p
+                    class="text-xs font-medium truncate"
+                    style="color: var(--color-heading)"
+                >
+                    {user?.firstName}
+                    {user?.lastName}
+                </p>
+                <p class="text-xs truncate" style="color: var(--color-muted)">
+                    {user?.emailAddresses?.[0]?.emailAddress}
+                </p>
+            </div>
+            <ul class="py-1 text-sm" style="color: var(--color-body)">
+                <li>
+                    <a
+                        href="/dashboard/profile"
+                        class="block px-4 py-2 hover:bg-gray-50">Profile</a
+                    >
+                </li>
+                <li>
+                    <a
+                        href="/dashboard/settings"
+                        class="block px-4 py-2 hover:bg-gray-50">Settings</a
+                    >
+                </li>
+                <li class="border-t" style="border-color: var(--color-border)">
+                    <SignOutButton asChild redirectUrl="/">
+                        <button
+                            class="block w-full text-left px-4 py-2 hover:bg-gray-50"
+                            style="color: var(--color-error)"
+                        >
+                            Sign Out
+                        </button>
+                    </SignOutButton>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<script>
+    const button = document.getElementById("user-menu-button");
+    const dropdown = document.getElementById("user-menu-dropdown");
+
+    button?.addEventListener("click", () => {
+        dropdown?.classList.toggle("hidden");
+    });
+
+    document.addEventListener("click", (e) => {
+        if (
+            !button?.contains(e.target as Node) &&
+            !dropdown?.contains(e.target as Node)
+        ) {
+            dropdown?.classList.add("hidden");
+        }
+    });
+</script>

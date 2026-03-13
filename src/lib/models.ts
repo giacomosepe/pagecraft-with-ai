@@ -147,6 +147,24 @@ const accessCodeSchema = new mongoose.Schema({
 });
 
 // ─────────────────────────────────────────
+// USER PROFILE
+// ─────────────────────────────────────────
+const userProfileSchema = new mongoose.Schema({
+  userId: { type: String, required: true, unique: true },
+  apiKeys: {
+    claude: { type: String, default: null },
+    openai: { type: String, default: null },
+  },
+  preferences: {
+    defaultTone: { type: String, default: null },
+    defaultLanguage: { type: String, enum: ["en", "it"], default: "en" },
+    defaultAudience: { type: String, default: null },
+  },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+});
+
+// ─────────────────────────────────────────
 // EXPORTS
 // ─────────────────────────────────────────
 export const Framework =
@@ -159,3 +177,7 @@ export const Page = mongoose.models.Page || mongoose.model("Page", pageSchema);
 
 export const AccessCode =
   mongoose.models.AccessCode || mongoose.model("AccessCode", accessCodeSchema);
+
+export const UserProfile =
+  mongoose.models.UserProfile ||
+  mongoose.model("UserProfile", userProfileSchema);

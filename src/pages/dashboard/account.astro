@@ -1,0 +1,295 @@
+---
+import Base from "../../layouts/Base.astro";
+import { connectDB } from "../../lib/db";
+import { AccessCode, UserProfile, Page } from "../../lib/models";
+import Button from "../../components/Button.astro";
+import AccountSidebar from "../../components/AccountSidebar.astro";
+
+const user = await Astro.locals.currentUser();
+if (!user) return Astro.redirect("/sign-in");
+
+const { userId } = Astro.locals.auth();
+
+await connectDB();
+const license = await AccessCode.findOne({ clerkUserId: user.id }).lean();
+const profile = await UserProfile.findOne({ userId }).lean();
+
+// Stats
+const totalPages = await Page.countDocuments({ userId });
+const completedPages = await Page.countDocuments({ userId, status: "complete" });
+const draftPages = await Page.countDocuments({ userId, status: "draft" });
+
+const memberSince = license?.purchasedAt
+    ? new Date(license.purchasedAt).toLocaleDateString("en-GB", {
+          year: "numeric", month: "long", day: "numeric",
+      })
+    : null;
+
+const activeTab = Astro.url.searchParams.get("tab") || "profile";
+const initial = (user.firstName?.[0] || user.emailAddresses?.[0]?.emailAddress?.[0] || "U").toUpperCase();
+---
+
+<Base title="Account">
+    <div class="min-h-screen" style="background: var(--color-bg)">
+
+        <!-- Top bar -->
+        <div class="border-b px-6 py-4 flex items-center justify-between" style="border-color: var(--color-border); background: var(--color-surface)">
+            <a href="/dashboard" class="flex items-center gap-2 text-sm transition-colors" style="color: var(--color-muted)">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to Dashboard
+            </a>
+            <span class="text-sm font-semibold" style="color: var(--color-heading)">Account</span>
+            <div class="w-32"></div>
+        </div>
+
+        <div class="max-w-6xl mx-auto px-6 py-8">
+            <div class="flex gap-6">
+
+                <!-- Left Panel -->
+
+                    <AccountSidebar
+                        activeTab={activeTab}
+                        user={user}
+                        stats={{ totalPages, completedPages, draftPages }}
+                    />
+
+
+                <!-- Right Panel -->
+                <div class="flex-1">
+
+                    <!-- ── PROFILE TAB ── -->
+                    {activeTab === "profile" && (
+                        <div>
+                            <div class="mb-6">
+                                <h2 class="text-xl font-bold mb-1" style="color: var(--color-heading)">Profile</h2>
+                                <p class="text-sm" style="color: var(--color-muted)">Your personal information and license details.</p>
+                            </div>
+
+                            <!-- Photo & Name -->
+                            <div class="card mb-4">
+                                <h3 class="text-sm font-semibold mb-4" style="color: var(--color-heading)">Photo & Name</h3>
+                                <div class="flex items-center gap-6">
+                                    <div>
+                                        {user.imageUrl ? (
+                                            <img src={user.imageUrl} alt="Profile photo" class="w-20 h-20 rounded-full object-cover" />
+                                        ) : (
+                                            <div class="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold" style="background: var(--color-accent)">
+                                                {initial}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="font-semibold text-lg" style="color: var(--color-heading)">{user.firstName} {user.lastName}</p>
+                                        <p class="text-sm mb-2" style="color: var(--color-muted)">{user.emailAddresses?.[0]?.emailAddress}</p>
+                                        <button id="update-photo-btn" class="text-xs underline transition-colors" style="color: var(--color-accent)">
+                                            Update photo & name →
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- License -->
+                            <div class="card mb-4">
+                                <h3 class="text-sm font-semibold mb-4" style="color: var(--color-heading)">License</h3>
+                                {license ? (
+                                    <div class="flex flex-col gap-3">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm" style="color: var(--color-muted)">Status</span>
+                                            <span class={`badge ${license.status === "active" ? "badge-accent" : "badge-gray"}`}>
+                                                {license.status === "active" ? "✓ Active" : "Purchased"}
+                                            </span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm" style="color: var(--color-muted)">License key</span>
+                                            <span class="text-sm font-mono" style="color: var(--color-body)">{license.licenseKey}</span>
+                                        </div>
+                                        {memberSince && (
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-sm" style="color: var(--color-muted)">Member since</span>
+                                                <span class="text-sm" style="color: var(--color-body)">{memberSince}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div class="text-center py-4">
+                                        <p class="text-sm mb-3" style="color: var(--color-muted)">No license found for this account.</p>
+                                        <a href="https://pagecraft.it" target="_blank" class="btn btn-primary text-sm">Get a license</a>
+                                    </div>
+                                )}
+                            </div>
+
+                            <!-- Danger Zone -->
+                            <div class="card" style="border-color: var(--color-error)">
+                                <h3 class="text-sm font-semibold mb-1" style="color: var(--color-error)">Danger Zone</h3>
+                                <p class="text-sm mb-4" style="color: var(--color-muted)">These actions are irreversible.</p>
+                                <Button variant="secondary" id="delete-account-btn">Delete Account</Button>
+                            </div>
+                        </div>
+                    )}
+
+                    <!-- ── SETTINGS TAB ── -->
+                    {activeTab === "settings" && (
+                        <div>
+                            <div class="mb-6">
+                                <h2 class="text-xl font-bold mb-1" style="color: var(--color-heading)">Settings</h2>
+                                <p class="text-sm" style="color: var(--color-muted)">Manage your API keys and writing preferences.</p>
+                            </div>
+
+                            <div class="card mb-4">
+                                <h3 class="text-sm font-semibold mb-1" style="color: var(--color-heading)">API Keys</h3>
+                                <p class="text-sm mb-4" style="color: var(--color-muted)">Your keys are stored privately and never shared.</p>
+                                <div class="flex flex-col gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1" style="color: var(--color-body)">Claude API Key</label>
+                                        <input id="claude-key" type="password" placeholder="sk-ant-..." value={profile?.apiKeys?.claude || ""} class="input" />
+                                        <p class="text-xs mt-1" style="color: var(--color-muted)">
+                                            Get your key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1" style="color: var(--color-body)">
+                                            OpenAI API Key <span class="font-normal" style="color: var(--color-muted)">(coming soon)</span>
+                                        </label>
+                                        <input id="openai-key" type="password" placeholder="sk-..." value={profile?.apiKeys?.openai || ""} class="input" disabled />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card mb-4">
+                                <h3 class="text-sm font-semibold mb-1" style="color: var(--color-heading)">Writing Preferences</h3>
+                                <p class="text-sm mb-4" style="color: var(--color-muted)">Pre-fill the setup screen every time you start a new page.</p>
+                                <div class="flex flex-col gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1" style="color: var(--color-body)">Default Audience</label>
+                                        <input id="default-audience" type="text" placeholder="e.g. Indie hackers, newsletter writers" value={profile?.preferences?.defaultAudience || ""} class="input" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1" style="color: var(--color-body)">Default Tone</label>
+                                        <select id="default-tone" class="input">
+                                            <option value="">No default</option>
+                                            <option value="conversational" selected={profile?.preferences?.defaultTone === "conversational"}>Conversational</option>
+                                            <option value="professional" selected={profile?.preferences?.defaultTone === "professional"}>Professional</option>
+                                            <option value="authoritative" selected={profile?.preferences?.defaultTone === "authoritative"}>Authoritative</option>
+                                            <option value="friendly" selected={profile?.preferences?.defaultTone === "friendly"}>Friendly</option>
+                                            <option value="educational" selected={profile?.preferences?.defaultTone === "educational"}>Educational</option>
+                                            <option value="storytelling" selected={profile?.preferences?.defaultTone === "storytelling"}>Storytelling</option>
+                                            <option value="persuasive" selected={profile?.preferences?.defaultTone === "persuasive"}>Persuasive</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1" style="color: var(--color-body)">Default Language</label>
+                                        <select id="default-language" class="input">
+                                            <option value="en" selected={profile?.preferences?.defaultLanguage === "en"}>English</option>
+                                            <option value="it" selected={profile?.preferences?.defaultLanguage === "it"}>Italian</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-3">
+                                <Button variant="primary" id="save-settings-btn">Save Settings</Button>
+                                <span id="save-status" class="text-sm hidden" style="color: var(--color-accent)">✓ Saved!</span>
+                            </div>
+                        </div>
+                    )}
+
+                    <!-- ── BILLING TAB ── -->
+                    {activeTab === "billing" && (
+                        <div>
+                            <div class="mb-6">
+                                <h2 class="text-xl font-bold mb-1" style="color: var(--color-heading)">Billing</h2>
+                                <p class="text-sm" style="color: var(--color-muted)">Your plan and payment details.</p>
+                            </div>
+                            <div class="card text-center py-12">
+                                <p class="text-2xl mb-2">💳</p>
+                                <p class="text-sm" style="color: var(--color-muted)">Billing management coming soon.</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clerk modal -->
+    <div id="clerk-profile-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(0,0,0,0.4)">
+        <div class="bg-white rounded-xl shadow-xl p-6 relative max-w-lg w-full mx-4">
+            <button id="close-modal-btn" class="absolute top-4 right-4" style="color: var(--color-muted)">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            <div id="clerk-profile-mount"></div>
+        </div>
+    </div>
+</Base>
+
+<script>
+    // ── PHOTO UPDATE ──
+    document.getElementById("update-photo-btn")?.addEventListener("click", () => {
+        document.getElementById("clerk-profile-modal")?.classList.remove("hidden");
+        const mountEl = document.getElementById("clerk-profile-mount");
+        if (mountEl && (window as any).Clerk) {
+            (window as any).Clerk.mountUserProfile(mountEl, {
+                appearance: {
+                    elements: {
+                        rootBox: { width: "100%" },
+                        card: { boxShadow: "none", border: "none" },
+                    },
+                },
+            });
+        }
+    });
+
+    document.getElementById("close-modal-btn")?.addEventListener("click", () => {
+        document.getElementById("clerk-profile-modal")?.classList.add("hidden");
+    });
+
+    document.getElementById("clerk-profile-modal")?.addEventListener("click", (e) => {
+        if (e.target === document.getElementById("clerk-profile-modal")) {
+            document.getElementById("clerk-profile-modal")?.classList.add("hidden");
+        }
+    });
+
+    // ── SAVE SETTINGS ──
+    document.getElementById("save-settings-btn")?.addEventListener("click", async () => {
+        const btn = document.getElementById("save-settings-btn");
+        const status = document.getElementById("save-status");
+        btn?.setAttribute("disabled", "true");
+
+        const body = {
+            claudeKey: (document.getElementById("claude-key") as HTMLInputElement)?.value.trim(),
+            openaiKey: (document.getElementById("openai-key") as HTMLInputElement)?.value.trim(),
+            defaultAudience: (document.getElementById("default-audience") as HTMLInputElement)?.value.trim(),
+            defaultTone: (document.getElementById("default-tone") as HTMLSelectElement)?.value,
+            defaultLanguage: (document.getElementById("default-language") as HTMLSelectElement)?.value,
+        };
+
+        try {
+            const res = await fetch("/api/profile/save", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+            });
+            if (res.ok) {
+                status?.classList.remove("hidden");
+                setTimeout(() => status?.classList.add("hidden"), 3000);
+            } else {
+                alert("Failed to save. Please try again.");
+            }
+        } catch (e) {
+            alert("Something went wrong.");
+        } finally {
+            btn?.removeAttribute("disabled");
+        }
+    });
+
+    // ── DELETE ACCOUNT ──
+    document.getElementById("delete-account-btn")?.addEventListener("click", () => {
+        if (confirm("Are you sure? This will permanently delete your account and all your pages.")) {
+            alert("Account deletion coming soon.");
+        }
+    });
+</script>
