@@ -1,0 +1,77 @@
+---
+/**
+ * ImproveBox.astro
+ * -----------------------------------------------------------------
+ * Component: Slide-in box for "Improve with AI" flow
+ * Used in: src/pages/dashboard/write.astro (inside the Step Card)
+ * Controlled by: src/scripts/write.ts (improveBox* functions)
+ * -----------------------------------------------------------------
+ * Shows when user clicks "Improve with AI" button.
+ * Pre-fills with the user's own textarea text so they can edit it.
+ * Has a separate instructions field for telling AI what to change.
+ * -----------------------------------------------------------------
+ */
+---
+
+<div
+    id="improve-box"
+    class="hidden mt-4 p-4 rounded-lg"
+    style="background: var(--color-accent-light)"
+>
+    <!-- User text — pre-filled from user-input textarea via write.ts -->
+    <label
+        class="block text-sm font-medium mb-1"
+        style="color: var(--color-accent-text)"
+    >
+        Your text
+        <span class="font-normal" style="color: var(--color-muted)">
+            (edit before sending)
+        </span>
+    </label>
+    <textarea id="improve-input" rows="3" class="input resize-none mb-3"
+    ></textarea>
+
+    <!-- Instructions for AI -->
+    <label
+        class="block text-sm font-medium mb-1"
+        style="color: var(--color-accent-text)"
+    >
+        Instructions for AI
+    </label>
+    <textarea
+        id="improve-instructions"
+        rows="2"
+        placeholder="e.g. Make it shorter, more emotional, add a specific example..."
+        class="input resize-none mb-3"></textarea>
+
+    <!-- Actions -->
+    <div class="flex gap-2">
+        <button id="improve-cancel-btn" class="btn btn-secondary">
+            Cancel
+        </button>
+        <button
+            id="improve-confirm-btn"
+            class="btn btn-warning flex items-center gap-2"
+        >
+            <span id="improve-label">✦ Improve</span>
+            <svg
+                id="improve-spinner"
+                class="hidden animate-spin w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+            >
+                <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"></circle>
+                <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+        </button>
+    </div>
+</div>

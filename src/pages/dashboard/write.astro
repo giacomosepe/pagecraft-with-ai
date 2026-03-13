@@ -1,8 +1,26 @@
 ---
+/**
+ * write.astro
+ * -----------------------------------------------------------------
+ * Page: /dashboard/write
+ * -----------------------------------------------------------------
+ * Fetches framework + default prompts from MongoDB.
+ * Passes data to client via window.__WRITE_DATA__.
+ *
+ * Layout components:
+ *   - GenerateModal   → src/components/write/GenerateModal.astro
+ *   - ImproveBox      → src/components/write/ImproveBox.astro
+ *
+ * All client logic lives in:
+ *   → src/scripts/write.ts
+ * -----------------------------------------------------------------
+ */
 import DashboardLayout from "../../layouts/DashboardLayout.astro";
 import { connectDB } from "../../lib/db";
 import { Framework, Prompt } from "../../lib/models";
 import Button from "../../components/Button.astro";
+import GenerateModal from "../../components/write/GenerateModal.astro";
+import ImproveBox from "../../components/write/ImproveBox.astro";
 
 const frameworkSlug = Astro.url.searchParams.get("framework");
 if (!frameworkSlug) return Astro.redirect("/dashboard/new");
@@ -30,7 +48,10 @@ const promptsData = JSON.stringify(promptsByStep);
 ---
 
 <DashboardLayout title="Write your page following the prompts">
-    <!-- Setup Screen -->
+    <!-- ══════════════════════════════════════════
+         SETUP SCREEN
+         Shown first — collects title, audience, tone, language
+    ══════════════════════════════════════════ -->
     <div id="setup-screen" class="max-w-xl mx-auto mt-12 px-6">
         <div class="mb-8">
             <h2
@@ -51,7 +72,8 @@ const promptsData = JSON.stringify(promptsByStep);
                         class="block text-sm font-medium mb-1"
                         style="color: var(--color-body)"
                     >
-                        Page Title <span
+                        Page Title
+                        <span
                             style="color: var(--color-muted)"
                             class="font-normal">(optional)</span
                         >
@@ -107,22 +129,23 @@ const promptsData = JSON.stringify(promptsByStep);
                         <option value="it">Italian</option>
                     </select>
                 </div>
-                <Button variant="primary" id="start-btn"
-                    >Start Writing →
-                </Button>
+                <Button variant="primary" id="start-btn">Start Writing →</Button
+                >
             </div>
         </div>
     </div>
 
-    <!-- Write Screen -->
+    <!-- ══════════════════════════════════════════
+         WRITE SCREEN
+         Hidden until setup is complete
+    ══════════════════════════════════════════ -->
     <div id="write-screen" class="hidden h-full">
         <div class="flex" style="min-height: calc(100vh - 57px);">
-            <!-- Left Panel — 1fr -->
+            <!-- Left Panel — framework name + step list -->
             <div
                 class="w-64 flex-shrink-0 border-r p-6 flex flex-col"
                 style="border-color: var(--color-border); background: var(--color-bg);"
             >
-                <!-- Framework name -->
                 <div class="mb-6">
                     <p
                         class="text-xs font-medium mb-1"
@@ -138,19 +161,15 @@ const promptsData = JSON.stringify(promptsByStep);
                     </h3>
                 </div>
 
-                <!-- Context pills -->
                 <div class="mb-6">
                     <p class="text-xs mb-2" style="color: var(--color-muted)">
                         Writing for
                     </p>
-                    <span id="context-category" class="badge badge-accent"
-                        >{framework.category}</span
-                    >
+                    <span class="badge badge-accent">{framework.category}</span>
                 </div>
 
                 <hr style="border-color: var(--color-border)" class="mb-4" />
 
-                <!-- Step list -->
                 <p
                     class="text-xs font-medium mb-3"
                     style="color: var(--color-muted)"
@@ -179,14 +198,15 @@ const promptsData = JSON.stringify(promptsByStep);
                 </ul>
             </div>
 
-            <!-- Right Panel — 2fr -->
+            <!-- Right Panel — active step + AI interaction -->
             <div class="flex-1 overflow-y-auto p-8">
-                <!-- Progress -->
+                <!-- Progress bar -->
                 <div class="mb-6">
                     <div class="flex items-center justify-between mb-2">
                         <span class="text-xs" style="color: var(--color-muted)">
-                            Step <span id="current-step-num">1</span> of <span
-                                id="total-steps">{framework.steps.length}</span
+                            Step <span id="current-step-num">1</span> of
+                            <span id="total-steps"
+                                >{framework.steps.length}</span
                             >
                         </span>
                         <span
@@ -215,9 +235,7 @@ const promptsData = JSON.stringify(promptsByStep);
                             style="color: var(--color-muted)"
                         >
                             This page is being written for a
-                            <span
-                                id="step-category-pill"
-                                class="badge badge-accent"
+                            <span class="badge badge-accent"
                                 >{framework.category}</span
                             > job
                         </p>
@@ -250,7 +268,7 @@ const promptsData = JSON.stringify(promptsByStep);
                             placeholder="Write your input here..."></textarea>
                     </div>
 
-                    <!-- Prompt collapsible -->
+                    <!-- Collapsible prompt — editable, with reset -->
                     <div class="mb-6">
                         <button
                             id="toggle-prompt"
@@ -289,9 +307,9 @@ const promptsData = JSON.stringify(promptsByStep);
                         </div>
                     </div>
 
-                    <!-- 3 action buttons -->
+                    <!-- Action buttons -->
                     <div class="flex items-center justify-between gap-2">
-                        <!-- Left group: manual -->
+                        <!-- Left: manual actions -->
                         <div class="flex gap-2">
                             <Button variant="primary" id="save-btn">Save</Button
                             >
@@ -299,15 +317,13 @@ const promptsData = JSON.stringify(promptsByStep);
                                 >Skip for now</Button
                             >
                         </div>
-
                         <!-- Divider -->
                         <div
                             class="w-px h-6 flex-shrink-0"
                             style="background: var(--color-border)"
                         >
                         </div>
-
-                        <!-- Right group: AI -->
+                        <!-- Right: AI actions -->
                         <div class="flex gap-2">
                             <Button variant="secondary" id="improve-btn"
                                 >Improve with AI</Button
@@ -318,482 +334,94 @@ const promptsData = JSON.stringify(promptsByStep);
                         </div>
                     </div>
 
-                    <!-- Improve box (hidden until Improve clicked) -->
-                    <div
-                        id="improve-box"
-                        class="hidden mt-4 p-4 rounded-lg"
-                        style="background: var(--color-accent-light)"
-                    >
-                        <label
-                            class="block text-sm font-medium mb-1"
-                            style="color: var(--color-accent-text)"
+                    <!-- ImproveBox component — hidden until "Improve with AI" clicked -->
+                    <ImproveBox />
+                </div>
+
+                <!-- AI Output Card — hidden until content is generated -->
+                <div id="output-card" class="card hidden mb-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <span
+                            class="text-sm font-medium"
+                            style="color: var(--color-body)"
+                            >Generated content</span
                         >
-                            What should AI improve?
-                        </label>
-                        <textarea
-                            id="improve-input"
-                            rows="2"
-                            placeholder="e.g. Make it shorter, more emotional, add a specific example..."
-                            class="input resize-none mb-2"></textarea>
-                        <div class="flex gap-2">
-                            <Button variant="secondary" id="improve-cancel-btn"
-                                >Cancel</Button
-                            >
-                            <Button variant="warning" id="improve-confirm-btn"
-                                >✦ Improve</Button
-                            >
-                        </div>
+                        <span class="badge badge-accent">AI</span>
+                    </div>
+                    <div
+                        id="ai-output"
+                        class="text-sm leading-relaxed whitespace-pre-wrap mb-4"
+                        style="color: var(--color-body)"
+                    >
                     </div>
 
-                    <!-- AI Output Card -->
-                    <div id="output-card" class="card hidden mb-4">
-                        <div class="flex items-center justify-between mb-3">
-                            <span
-                                class="text-sm font-medium"
-                                style="color: var(--color-body)"
-                                >Generated content</span
-                            >
-                            <span class="badge badge-accent">AI</span>
-                        </div>
-                        <div
-                            id="ai-output"
-                            class="text-sm leading-relaxed whitespace-pre-wrap mb-4"
+                    <hr class="divider" />
+
+                    <div class="mb-4">
+                        <label
+                            class="block text-sm font-medium mb-1"
                             style="color: var(--color-body)"
                         >
-                        </div>
-
-                        <hr class="divider" />
-
-                        <div class="mb-4">
-                            <label
-                                class="block text-sm font-medium mb-1"
-                                style="color: var(--color-body)"
+                            Want improvements?
+                            <span
+                                class="font-normal"
+                                style="color: var(--color-muted)"
+                                >Tell AI what to change</span
                             >
-                                Want improvements?
-                                <span
-                                    class="font-normal"
-                                    style="color: var(--color-muted)"
-                                    >Tell AI what to change</span
-                                >
-                            </label>
-                            <textarea
-                                id="refinement-input"
-                                rows="2"
-                                placeholder="e.g. Make it shorter, more personal, add a metaphor..."
-                                class="input resize-none"></textarea>
-                        </div>
+                        </label>
+                        <textarea
+                            id="refinement-input"
+                            rows="2"
+                            placeholder="e.g. Make it shorter, more personal, add a metaphor..."
+                            class="input resize-none"></textarea>
+                    </div>
 
-                        <div class="flex gap-2">
-                            <Button variant="secondary" id="refine-btn"
-                                >↺ Refine</Button
-                            >
-                            <Button variant="primary" id="approve-btn"
-                                >Approve & Next →</Button
-                            >
-                        </div>
+                    <div class="flex gap-2">
+                        <Button variant="secondary" id="refine-btn"
+                            >↺ Refine</Button
+                        >
+                        <Button variant="primary" id="approve-btn"
+                            >Approve & Next →</Button
+                        >
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Complete Screen -->
-        <div
-            id="complete-screen"
-            class="hidden max-w-xl mx-auto mt-12 px-6 text-center"
-        >
-            <div class="text-4xl mb-4">✦</div>
-            <h2
-                class="text-2xl font-bold mb-2"
-                style="color: var(--color-heading)"
-            >
-                Page complete!
-            </h2>
-            <p class="mb-8" style="color: var(--color-muted)">
-                All steps done. Your page is ready to export.
-            </p>
-            <div class="flex gap-3 justify-center">
-                <Button variant="primary" id="export-md-btn"
-                    >Export as .md</Button
-                >
-                <Button variant="secondary" id="copy-btn"
-                    >Copy to clipboard</Button
-                >
-            </div>
+    <!-- ══════════════════════════════════════════
+         COMPLETE SCREEN
+         Shown when all steps are approved or skipped
+    ══════════════════════════════════════════ -->
+    <div
+        id="complete-screen"
+        class="hidden max-w-xl mx-auto mt-12 px-6 text-center"
+    >
+        <div class="text-4xl mb-4">✦</div>
+        <h2 class="text-2xl font-bold mb-2" style="color: var(--color-heading)">
+            Page complete!
+        </h2>
+        <p class="mb-8" style="color: var(--color-muted)">
+            All steps done. Your page is ready to export.
+        </p>
+        <div class="flex gap-3 justify-center">
+            <Button variant="primary" id="export-md-btn">Export as .md</Button>
+            <Button variant="secondary" id="copy-btn">Copy to clipboard</Button>
         </div>
     </div>
 
-    <script define:vars={{ frameworkData, promptsData }}>
-        const framework = JSON.parse(frameworkData);
-        const promptsByStep = JSON.parse(promptsData);
-        const steps = framework.steps.sort((a, b) => a.order - b.order);
-
-        // State
-        let currentStepIndex = 0;
-        let sessionData = {
-            title: "Untitled",
-            audience: "",
-            tone: "",
-            language: "en",
-            steps: steps.map((s) => ({
-                order: s.order,
-                userInput: "",
-                aiGenerated: "",
-                customPrompt: null,
-                approved: false,
-                skipped: false,
-            })),
-        };
-
-        // Elements
-        const setupScreen = document.getElementById("setup-screen");
-        const writeScreen = document.getElementById("write-screen");
-        const completeScreen = document.getElementById("complete-screen");
-        const stepItems = document.querySelectorAll(".step-list-item");
-
-        // ── SETUP ──
-        document.getElementById("start-btn")?.addEventListener("click", () => {
-            const audience = document
-                .getElementById("setup-audience")
-                .value.trim();
-            const tone = document.getElementById("setup-tone").value;
-            if (!audience || !tone) {
-                alert("Please fill in audience and tone before starting.");
-                return;
-            }
-            sessionData.title =
-                document.getElementById("setup-title").value.trim() ||
-                "Untitled";
-            sessionData.audience = audience;
-            sessionData.tone = tone;
-            sessionData.language =
-                document.getElementById("setup-language").value;
-
-            setupScreen.classList.add("hidden");
-            writeScreen.classList.remove("hidden");
-            loadStep(0);
-        });
-
-        // ── UPDATE STEP LIST ──
-        function updateStepList() {
-            stepItems.forEach((item, i) => {
-                const icon = item.querySelector(".step-icon");
-                const isActive = i === currentStepIndex;
-                const isApproved = sessionData.steps[i].approved;
-                const isSkipped = sessionData.steps[i].skipped;
-
-                // Reset styles
-                item.style.color = "var(--color-muted)";
-                item.style.background = "transparent";
-                item.style.fontWeight = "normal";
-
-                if (isApproved) {
-                    icon.textContent = "✓";
-                    icon.style.color = "var(--color-accent)";
-                } else if (isSkipped) {
-                    icon.textContent = "✕";
-                    icon.style.color = "var(--color-error)";
-                } else {
-                    icon.textContent = i + 1;
-                    icon.style.color = "";
-                }
-
-                if (isActive) {
-                    item.style.background = "var(--color-accent-light)";
-                    item.style.color = "var(--color-accent-text)";
-                    item.style.fontWeight = "500";
-                }
-            });
-        }
-
-        // ── STEP LIST CLICK ──
-        stepItems.forEach((item, i) => {
-            item.addEventListener("click", () => {
-                loadStep(i);
-            });
-        });
-
-        // ── LOAD STEP ──
-        function loadStep(index) {
-            currentStepIndex = index;
-            const step = steps[index];
-
-            // Progress
-            const progress = (index / steps.length) * 100;
-            document.getElementById("progress-bar").style.width =
-                progress + "%";
-            document.getElementById("current-step-num").textContent = index + 1;
-
-            // Step info
-            document.getElementById("step-title").textContent = step.title;
-            document.getElementById("step-title-top").textContent = step.title;
-            document.getElementById("step-description").textContent =
-                step.description;
-
-            // User input
-            const userInputEl = document.getElementById("user-input");
-            userInputEl.placeholder =
-                step.placeholder || "Write your input here...";
-            userInputEl.value = sessionData.steps[index].userInput || "";
-
-            // Prompt
-            const defaultPrompt = promptsByStep[step.order] || "";
-            document.getElementById("prompt-text").value =
-                sessionData.steps[index].customPrompt || defaultPrompt;
-
-            // Output
-            const outputCard = document.getElementById("output-card");
-            if (sessionData.steps[index].aiGenerated) {
-                document.getElementById("ai-output").textContent =
-                    sessionData.steps[index].aiGenerated;
-                outputCard.classList.remove("hidden");
-            } else {
-                outputCard.classList.add("hidden");
-            }
-
-            // Reset improve box
-            document.getElementById("improve-box").classList.add("hidden");
-            document.getElementById("improve-input").value = "";
-
-            updateStepList();
-        }
-
-        // ── SAVE INPUT ON TYPE ──
-        document
-            .getElementById("user-input")
-            ?.addEventListener("input", (e) => {
-                sessionData.steps[currentStepIndex].userInput = e.target.value;
-            });
-
-        // ── TOGGLE PROMPT ──
-        document
-            .getElementById("toggle-prompt")
-            ?.addEventListener("click", () => {
-                const container = document.getElementById("prompt-container");
-                const chevron = document.getElementById("prompt-chevron");
-                container.classList.toggle("hidden");
-                chevron.classList.toggle("rotate-90");
-            });
-
-        // ── RESET PROMPT ──
-        document
-            .getElementById("reset-prompt")
-            ?.addEventListener("click", () => {
-                const step = steps[currentStepIndex];
-                document.getElementById("prompt-text").value =
-                    promptsByStep[step.order] || "";
-                sessionData.steps[currentStepIndex].customPrompt = null;
-            });
-
-        // ── SAVE ──
-        document.getElementById("save-btn")?.addEventListener("click", () => {
-            const userInput = document
-                .getElementById("user-input")
-                .value.trim();
-            if (!userInput) {
-                alert("Nothing to save yet.");
-                return;
-            }
-            sessionData.steps[currentStepIndex].userInput = userInput;
-            sessionData.steps[currentStepIndex].approved = true;
-            sessionData.steps[currentStepIndex].skipped = false;
-
-            updateStepList();
-
-            // Move to next if not last
-            if (currentStepIndex < steps.length - 1) {
-                loadStep(currentStepIndex + 1);
-            } else {
-                checkComplete();
-            }
-        });
-
-        // ── SKIP ──
-        document.getElementById("skip-btn")?.addEventListener("click", () => {
-            sessionData.steps[currentStepIndex].skipped = true;
-            sessionData.steps[currentStepIndex].approved = false;
-            updateStepList();
-
-            if (currentStepIndex < steps.length - 1) {
-                loadStep(currentStepIndex + 1);
-            } else {
-                checkComplete();
-            }
-        });
-        // ── AI HELPER for prompts ──
-        async function callGenerate(payload) {
-            const res = await fetch("/api/generate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            });
-            const data = await res.json();
-            if (!res.ok || data.error) {
-                throw new Error(data.error || "Generation failed");
-            }
-            return data.result;
-        }
-        // ── GENERATE With AI => called FROM /lib/ai.ts ──
-        document
-            .getElementById("generate-btn")
-            ?.addEventListener("click", async () => {
-                const userInput = document
-                    .getElementById("user-input")
-                    .value.trim();
-                if (!userInput) {
-                    alert("Please fill in your input.");
-                    return;
-                }
-
-                try {
-                    const result = await callGenerate({
-                        mode: "generate",
-                        userInput,
-                        prompt: document.getElementById("prompt-text").value,
-                        tone: sessionData.tone,
-                        audience: sessionData.audience,
-                        language: sessionData.language,
-                    });
-                    sessionData.steps[currentStepIndex].aiGenerated = result;
-                    document.getElementById("ai-output").textContent = result;
-                    document
-                        .getElementById("output-card")
-                        .classList.remove("hidden");
-                } catch (err) {
-                    alert(err.message);
-                }
-            });
-
-        // ── IMPROVE WITH AI => Called from /lib/ai.ts ──
-        document
-            .getElementById("improve-confirm-btn")
-            ?.addEventListener("click", async () => {
-                const userInput = document
-                    .getElementById("user-input")
-                    .value.trim();
-                const instructions = document
-                    .getElementById("improve-input")
-                    .value.trim(); // ← read from textarea
-                if (!instructions) {
-                    alert("Tell AI what to improve first.");
-                    return;
-                }
-
-                try {
-                    const result = await callGenerate({
-                        mode: "improve",
-                        userInput,
-                        instructions,
-                        tone: sessionData.tone,
-                        audience: sessionData.audience,
-                        language: sessionData.language,
-                    });
-                    sessionData.steps[currentStepIndex].aiGenerated = result;
-                    document.getElementById("ai-output").textContent = result;
-                    document
-                        .getElementById("output-card")
-                        .classList.remove("hidden");
-                    document
-                        .getElementById("improve-box")
-                        .classList.add("hidden");
-                    document.getElementById("improve-input").value = "";
-                } catch (err) {
-                    alert(err.message);
-                }
-            });
-        // improve cancel
-        document
-            .getElementById("improve-cancel-btn")
-            ?.addEventListener("click", () => {
-                document.getElementById("improve-box").classList.add("hidden");
-                document.getElementById("improve-input").value = "";
-            });
-
-        // ── APPROVE & NEXT ──
-        document
-            .getElementById("approve-btn")
-            ?.addEventListener("click", () => {
-                sessionData.steps[currentStepIndex].approved = true;
-                sessionData.steps[currentStepIndex].skipped = false;
-                updateStepList();
-
-                if (currentStepIndex < steps.length - 1) {
-                    loadStep(currentStepIndex + 1);
-                } else {
-                    checkComplete();
-                }
-            });
-
-        // ── REFINE with AI=> Called from /lib/ai.ts ──
-        document
-            .getElementById("refine-btn")
-            ?.addEventListener("click", async () => {
-                const instructions = document
-                    .getElementById("refinement-input")
-                    .value.trim(); // ← read from textarea
-                if (!instructions) {
-                    alert("Tell AI what to refine first.");
-                    return;
-                }
-
-                try {
-                    const result = await callGenerate({
-                        mode: "refine",
-                        aiOutput:
-                            sessionData.steps[currentStepIndex].aiGenerated,
-                        instructions,
-                        tone: sessionData.tone,
-                        audience: sessionData.audience,
-                        language: sessionData.language,
-                    });
-                    sessionData.steps[currentStepIndex].aiGenerated = result;
-                    document.getElementById("ai-output").textContent = result;
-                    document.getElementById("refinement-input").value = "";
-                } catch (err) {
-                    alert(err.message);
-                }
-            });
-
-        // ── CHECK COMPLETE ──
-        function checkComplete() {
-            const allDone = sessionData.steps.every(
-                (s) => s.approved || s.skipped,
-            );
-            if (allDone) {
-                writeScreen.classList.add("hidden");
-                completeScreen.classList.remove("hidden");
-            }
-        }
-
-        // ── EXPORT ──
-        document
-            .getElementById("export-md-btn")
-            ?.addEventListener("click", () => {
-                let md = `# ${sessionData.title}\n\n`;
-                sessionData.steps.forEach((s, i) => {
-                    if (s.aiGenerated || s.userInput) {
-                        md += `## ${steps[i].title}\n\n${s.aiGenerated || s.userInput}\n\n`;
-                    }
-                });
-                const blob = new Blob([md], { type: "text/markdown" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `${sessionData.title.toLowerCase().replace(/\s+/g, "-")}.md`;
-                a.click();
-            });
-
-        // ── COPY ──
-        document.getElementById("copy-btn")?.addEventListener("click", () => {
-            let text = `# ${sessionData.title}\n\n`;
-            sessionData.steps.forEach((s, i) => {
-                if (s.aiGenerated || s.userInput) {
-                    text += `## ${steps[i].title}\n\n${s.aiGenerated || s.userInput}\n\n`;
-                }
-            });
-            navigator.clipboard.writeText(text);
-            const btn = document.getElementById("copy-btn");
-            btn.textContent = "Copied!";
-            setTimeout(() => (btn.textContent = "Copy to clipboard"), 2000);
-        });
-    </script>
+    <!-- GenerateModal component — hidden until "Generate with AI" clicked -->
+    <GenerateModal />
 </DashboardLayout>
+
+<!--
+    Data bridge: passes server-side framework + prompt data to write.ts
+    window.__WRITE_DATA__ is read by src/scripts/write.ts
+-->
+<script define:vars={{ frameworkData, promptsData }}>
+    window.__WRITE_DATA__ = { frameworkData, promptsData };
+</script>
+
+<!-- All write page logic — see src/scripts/write.ts -->
+
+<script src="../../scripts/write/index.ts"></script>
