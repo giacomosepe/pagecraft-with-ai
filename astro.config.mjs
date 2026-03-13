@@ -13,7 +13,10 @@ export default defineConfig({
       signUpUrl: "/sign-up",
     }),
   ],
-  adapter: vercel(),
+  // edgeMiddleware: false tells Vercel to run middleware as Node.js
+  // instead of an Edge Function — required for Clerk which uses
+  // Node.js modules (fs, path, crypto etc) that Edge doesn't support
+  adapter: vercel({ edgeMiddleware: false }),
   output: "server",
 
   i18n: {
